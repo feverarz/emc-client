@@ -85,9 +85,9 @@ export default function AbmAlumno({id_alumno,finalizarAltaOcopia,esModal,id_copi
     const [conciertos,setConciertos] = useState({concierto1:false,concierto1:false})
     const [carreras,setCarreras] = useState([])
     const [carrerasAlumno,setCarrerasAlumno] = useState([])
-    const [cobranzasAlumno,setCobranzasAlumno] = useState([])
+    /*const [cobranzasAlumno,setCobranzasAlumno] = useState([])
     const [becas,setBecas] = useState([])
-    const [becasAlumno,setBecasAlumno] = useState([])
+    const [becasAlumno,setBecasAlumno] = useState([])*/
     const [historialAmpliado,setHistorialAmpliado]=useState(false)
     const [esconderMain,setEsconderMain] = useState(esProfesor ? true : false)
     // estado objeto de inicialización que inicializa los valores del abm 
@@ -295,7 +295,6 @@ useEffect(()=>{
                     habilitado_web: datosDelRecordset.habilitado_web ? datosDelRecordset.habilitado_web : false // es un campo nuevo en la tabla, si es NULL lo tomamos como no activo para que entren y lo activen
                 }
                   
-                console.log('loc',datosDelRecordset)
                 //se actualiza el objeto  de inicializacion con lo que traemos de la tabla
                 // se hace un merge de los datos, los que son comunes se pisan y los nuevos se agregan
 
@@ -460,9 +459,10 @@ const buscarMateriasAprobadasEinstrumentosAlumno = async ()=>{
                                                 Axios.get(`/api/alumnos/cursosborrados/${id_alumno}`),
                                                 Axios.get(`/api/alumnos/conciertosfinales/${id_alumno}`),
                                                 Axios.get(`/api/alumnos/carreras/${id_alumno}`),
-                                                Axios.get(`/api/tablasgenerales/cobranzas/alumno/${id_alumno}/1`),
-                                                Axios.get(`/api/tablasgenerales/becas/alumno/${id_alumno}`),
-                                                Axios.get(`/api/tablasgenerales/becas`)])
+                                            //    Axios.get(`/api/tablasgenerales/cobranzas/alumno/${id_alumno}/1`),
+                                            //    Axios.get(`/api/tablasgenerales/becas/alumno/${id_alumno}`),
+                                            //    Axios.get(`/api/tablasgenerales/becas`)
+                                            ])
     
 
         if (vectorResultado[1].data.some(item=>item.id_instrumento>0))
@@ -483,9 +483,9 @@ const buscarMateriasAprobadasEinstrumentosAlumno = async ()=>{
         setHuboCambiosInstrumentos(false)
         setHuboCambiosMaterias(false)
 
-        setCobranzasAlumno(vectorResultado[6].data)
-        setBecasAlumno(vectorResultado[7].data)
-        setBecas(vectorResultado[8].data)
+        //setCobranzasAlumno(vectorResultado[6].data)
+        //setBecasAlumno(vectorResultado[7].data)
+        //setBecas(vectorResultado[8].data)
 
         return(true)
 
@@ -1149,8 +1149,8 @@ const onsubmitAlumno = values =>{
             </div>
         } 
   <div className={grabandoDatosAlumno ? "hidden" : ""}>
-  <Cobranzas cobranzasAlumno={cobranzasAlumno}/>
-  <Becas becasAlumno={becasAlumno} becas={becas}/>
+  {/*<Cobranzas cobranzasAlumno={cobranzasAlumno}/>*/}
+  {/*<Becas becasAlumno={becasAlumno} becas={becas}/>*/}
   <div className='pt-4 rounded flex f-row container-mult-flex-center relative' >
              <div><div>
                 <Formik validateOnMount 

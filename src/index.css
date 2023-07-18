@@ -3460,3 +3460,18 @@ select {
   text-align: center;
   padding:0.25rem
 }
+
+table#nuevos-alumnos tbody tr td{
+  border-bottom: solid 1px gray;
+  padding:5px;
+  cursor:pointer
+}
+
+table#nuevos-alumnos thead tr th{
+ font-weight: 700;
+}
+
+table#nuevos-alumnos tbody tr {
+
+  background:#9F9F9F;
+}

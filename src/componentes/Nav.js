@@ -15,6 +15,7 @@ import RefrescarTablas from './RefrescarTablas'
 import ExportacionExcel from './ExportacionExcel';
 import Logs from './Logs';
 //import {Finanzas} from './Finanzas';
+import {NuevosAlumnos} from './NuevosAlumnos';
 
 import imagen from '../logoemc.PNG';
 
@@ -405,9 +406,13 @@ return(
                           setTitulo('Listado de materias')
                           toggle();toggleMenuVertical()}}>Materias
           </li>
-          <li title="Finanzas" className="listado-al  p-2" onClick={()=>{setComponenteModal('finanzas')
+          {/*<li title="Finanzas" className="listado-al  p-2" onClick={()=>{setComponenteModal('finanzas')
                           setTitulo('Finanzas')
                           toggle();toggleMenuVertical()}}>Finanzas
+          </li>*/}
+          <li title="Nuevos alumnos" className="listado-al  p-2" onClick={()=>{setComponenteModal('nuevos-alumnos')
+                          setTitulo('Nuevos alumnos')
+                          toggle();toggleMenuVertical()}}>Nuevos alumnos
           </li>
           <li title="Actualizar tablas secundarias" className="listado-al mt-4 mb-6 p-2" onClick={()=>{setComponenteModal('refrescar')
                           setTitulo('Actualizar tablas secundarias')
@@ -493,19 +498,13 @@ function SeleccionarComponenteModal({componente}){
  
   switch(componente){
     case  'aulas' : return <Aulas/>
-    break;
     case 'materias' : return <Materias/>
-    break;
     case 'instrumentos' : return <Instrumentos/>
-    break;
     case 'cuatrimestres' : return <Cuatrimestres/>
-    break;
     case 'refrescar' : return <RefrescarTablas/>
-    break; 
     case 'logs' : return <Logs/>
-    break;        
     //case 'finanzas' : return <Finanzas/>
-    break;        
+    case 'nuevos-alumnos' : return <NuevosAlumnos/>
     default: return null
   }
 }
