@@ -11,10 +11,9 @@ import { faWindowClose,faPlusSquare, faCheckSquare,faTrashAlt } from '@fortaweso
 import { v4 as uuidv4 } from 'uuid';
 import HistorialAlumno from '../componentes/HistorialAlumno';
 import ImpresionesAlumno from '../componentes/Impresiones-alumno';
-import {hacerfocoEnPrimerInput,seleccionarTextoInput,scrollTop} from '../Helpers/utilidades-globales';
+import { hacerfocoEnPrimerInput,seleccionarTextoInput } from '../Helpers/utilidades-globales';
 import GestionEgresos from '../componentes/GestionEgresos'
 import useModal from '../hooks/useModal';
-import Curso from '../Vistas/Curso';
 import Modal from '../componentes/Modal';
 import {useAlumno} from '../Context/alumnoContext';
 import { faSearch,faUndo } from '@fortawesome/free-solid-svg-icons';
@@ -23,12 +22,11 @@ import AbmBecas from '../abms/abm-becas'
 import AbmInstrumentosAlumno from './Abm-instrumentos-alumno';
 import RenderNota from '../componentes/RenderNota';
 
-export default function AbmAlumno({id_alumno,finalizarAltaOcopia,esModal,id_copia,usuariom,finalizarAltaPorError,usuarioPuedeActualizarNiveles,grabarSoloDatos}){
+export default function AbmAlumno({id_alumno,finalizarAltaOcopia,esModal,id_copia,usuariom,finalizarAltaPorError,usuarioPuedeActualizarNiveles,grabarSoloDatos, datosInscripcion = null}){
 
     const {refrescarAlumno,usuario} = useAlumno() // deber ir antes de esProfesor porque usa el objeto usuario
     const esProfesor = usuario.id_permiso != 3 // deber ir al principio porque hay decisiones que se toman en función de esta variable
 
-    console.log('renderiza abm alumno')
     const provinciaDefault = [{id_provincia:-1, nombre:"Seleccionar país"}]
 
     // estados flags 
@@ -124,8 +122,58 @@ export default function AbmAlumno({id_alumno,finalizarAltaOcopia,esModal,id_copi
     const idRefrescar = useRef(0)
     const deshabilitar = !esProfesor ? true : false;
 
+    useEffect(() => {
+
+        if (datosInscripcion) {
+            const checkSexo = (sexo) => {
+                if (sexo === 'Femenino') {
+                    return 'F'
+                } else if (sexo === 'No binario') {
+                    return 'X'
+                } else if (sexo === 'Prefiero NO responder') {
+                    return 'N'
+                }
+                return 'M' 
+            }
+            const fechaNacimiento = datosInscripcion.fecha_nac.split('/')
+            console.log(datosInscripcion)
+            const datosAlumno = {
+                nacionalidad:datosInscripcion.nacionalidad.trim(),
+                pais:datosInscripcion.paisId,
+                provincia:datosInscripcion.provinciaId,  
+                nombre:datosInscripcion.nombre,
+                apellido:datosInscripcion.apellido,
+                documento:noNull(datosInscripcion.documento),
+                fecha:`${fechaNacimiento[2]}-${fechaNacimiento[0]}-${fechaNacimiento[1]}T00:00:00.000Z`, 
+                anio:fechaNacimiento[2],
+                dia:fechaNacimiento[0].padStart(2, '0'),
+                mes:Number(fechaNacimiento[1].padStart(2, '0')),
+                sexo:checkSexo(datosInscripcion.sexo),
+                domicilio:noNull(datosInscripcion.domicilio),
+                localidad:noNull(datosInscripcion.localidad),
+                codpostal:noNull(datosInscripcion.codpostal),
+                email:noNull(datosInscripcion.email),
+                telefono:noNull(datosInscripcion.telefono),
+                celular:noNull(datosInscripcion.celular),
+                
+            }
+            setObjetoInicializacion({...objetoInicializacion,...datosAlumno}) 
+
+            const objetoAagregar = {instrumentos:datosInscripcion.instrumento,
+                id_instrumento:instrumentoSeleccionado,
+                id_nivel_ensamble:0,
+                id_nivel_instrumental:0,
+                nivel_e:'..',
+                nivel_i:'..',
+                inst_principal:true}
+            setInstrumentosAlumno([...instrumentosAlumno, objetoAagregar])
+            const newCarrera = parseInt(datosInscripcion.carreras.trim())
+            setCarrerasAlumno([{id_carrera:newCarrera}])
+        }
+    }, [])
+
     useEffect(()=>{
-        if (usuario.id_permiso!=3){
+        if (usuario.id_permiso!==3){
             setTimeout(() => {
                 const objetosDeEdicion = document.querySelectorAll('.edit')
                 const objetosInput = document.querySelectorAll('form#ref-ficha input')
@@ -230,857 +278,848 @@ export default function AbmAlumno({id_alumno,finalizarAltaOcopia,esModal,id_copi
 
      },[id_alumno])
 
-useEffect(()=>{ // procesa los cierres de modales por boton cerrar y no por otro motivo
-    if (!isShowing){
-        if (idCursoSeleccionado){
-            setIdCursoSeleccionado(null)
-            idRefrescar.current = Math.floor(Math.random() * 100)
+    useEffect(()=>{ // procesa los cierres de modales por boton cerrar y no por otro motivo
+        if (!isShowing){
+            if (idCursoSeleccionado){
+                setIdCursoSeleccionado(null)
+                idRefrescar.current = Math.floor(Math.random() * 100)
+            }
+            if (mostrarCursadasBorradas){
+                setMostrarCursadasBorradas(false)
+            }
+            if(agregarBeca){
+                setAgregarBeca(false)
+            }
         }
-        if (mostrarCursadasBorradas){
-            setMostrarCursadasBorradas(false)
-        }
-        if(agregarBeca){
-            setAgregarBeca(false)
-        }
-    }
-},[isShowing])
+    },[isShowing])
 
-useEffect(()=>{
+    useEffect(()=>{
 
-    const completarDatosDelAlumno = async (id)=>{   
-        setCargandoDatosAlumno(true)
-        try{
-            
-                const {data} = await Axios.get(`/api/alumnos/${id}`)
+        const completarDatosDelAlumno = async (id)=>{   
+            setCargandoDatosAlumno(true)
+            try{
+                
+                    const {data} = await Axios.get(`/api/alumnos/${id}`)
 
-                if (!data) {
-                    const mensaje_html = `<p>No se encontraron datos para el alumno ${id}</p>`
-    
+                    if (!data) {
+                        const mensaje_html = `<p>No se encontraron datos para el alumno ${id}</p>`
+        
+                        Swal.fire({
+                            html:mensaje_html,
+                            icon: 'warning',
+                            confirmButtonColor: '#3085d6',
+                        })   
+
+                        setCargandoDatosAlumno(false)
+                        setHuboError(true)
+                        return
+                    }
+
+                    const datosDelRecordset = data[0];
+                    const datosAlumno = {
+                        id_alumno:id_alumno,
+                        nacionalidad:datosDelRecordset.nacionalidad,
+                        pais:datosDelRecordset.id_pais,
+                        provincia:datosDelRecordset.id_provincia,
+                        nombre:datosDelRecordset.nombre,
+                        apellido:datosDelRecordset.apellido,
+                        documento:noNull(datosDelRecordset.documento),
+                        fecha:datosDelRecordset.fecha_nac,
+                        anio:datosDelRecordset.fecha_nac.slice(0,4),
+                        dia:datosDelRecordset.fecha_nac.slice(8,10),
+                        mes:Number(datosDelRecordset.fecha_nac.slice(5,7)),
+                        sexo:datosDelRecordset.sexo,
+                        domicilio:noNull(datosDelRecordset.domicilio),
+                        localidad:noNull(datosDelRecordset.localidad),
+                        codpostal:noNull(datosDelRecordset.codPostal),
+                        domicilio2:noNull(datosDelRecordset.domicilio_2),
+                        email:noNull(datosDelRecordset.email),
+                        email_secundario:noNull(datosDelRecordset.Email_Secundario),
+                        telefono:noNull(datosDelRecordset.telefono),
+                        telef_laboral:noNull(datosDelRecordset.Telef_Laboral),
+                        telef_alternativo:noNull(datosDelRecordset.Telef_Alternativo),
+                        celular:noNull(datosDelRecordset.Celular),
+                        obs_finanzas:noNull(datosDelRecordset.obs_finanzas),
+                        habilitado_web: datosDelRecordset.habilitado_web ? datosDelRecordset.habilitado_web : false // es un campo nuevo en la tabla, si es NULL lo tomamos como no activo para que entren y lo activen
+                    }
+                    
+                    //se actualiza el objeto  de inicializacion con lo que traemos de la tabla
+                    // se hace un merge de los datos, los que son comunes se pisan y los nuevos se agregan
+
+                    setObjetoInicializacion({...objetoInicializacion,...datosAlumno}) 
+
+                    setDatosParaImpresiones(datosDelRecordset)
+
+                    setContadorOperaciones(contadorOperaciones+1); // modifico contadorOperaciones para que se dispare el effect que busca materias e instrumentos una vez que se hayan cargado primero los datos del alumno. De esta forma ordeno secuencialmente la carga de datos y evito el warning de react "Can't perform a React state update on an unmounted component"
+                    setCargandoDatosAlumno(false)
+
+                    return(datosDelRecordset)
+                }catch(err){
+
+                    console.log(err)
+                    const mensaje_html = `${err}`
                     Swal.fire({
                         html:mensaje_html,
                         icon: 'warning',
                         confirmButtonColor: '#3085d6',
                     })   
-
+                
                     setCargandoDatosAlumno(false)
                     setHuboError(true)
-                    return
                 }
 
-                const datosDelRecordset = data[0];
-                const datosAlumno = {
-                    id_alumno:id_alumno,
-                    nacionalidad:datosDelRecordset.nacionalidad,
-                    pais:datosDelRecordset.id_pais,
-                    provincia:datosDelRecordset.id_provincia,
-                    nombre:datosDelRecordset.nombre,
-                    apellido:datosDelRecordset.apellido,
-                    documento:noNull(datosDelRecordset.documento),
-                    fecha:datosDelRecordset.fecha_nac,
-                    anio:datosDelRecordset.fecha_nac.slice(0,4),
-                    dia:datosDelRecordset.fecha_nac.slice(8,10),
-                    mes:Number(datosDelRecordset.fecha_nac.slice(5,7)),
-                    sexo:datosDelRecordset.sexo,
-                    domicilio:noNull(datosDelRecordset.domicilio),
-                    localidad:noNull(datosDelRecordset.localidad),
-                    codpostal:noNull(datosDelRecordset.codPostal),
-                    domicilio2:noNull(datosDelRecordset.domicilio_2),
-                    email:noNull(datosDelRecordset.email),
-                    email_secundario:noNull(datosDelRecordset.Email_Secundario),
-                    telefono:noNull(datosDelRecordset.telefono),
-                    telef_laboral:noNull(datosDelRecordset.Telef_Laboral),
-                    telef_alternativo:noNull(datosDelRecordset.Telef_Alternativo),
-                    celular:noNull(datosDelRecordset.Celular),
-                    obs_finanzas:noNull(datosDelRecordset.obs_finanzas),
-                    habilitado_web: datosDelRecordset.habilitado_web ? datosDelRecordset.habilitado_web : false // es un campo nuevo en la tabla, si es NULL lo tomamos como no activo para que entren y lo activen
-                }
-                  
-                //se actualiza el objeto  de inicializacion con lo que traemos de la tabla
-                // se hace un merge de los datos, los que son comunes se pisan y los nuevos se agregan
+        }
 
-                setObjetoInicializacion({...objetoInicializacion,...datosAlumno}) 
+        if (tablasCargadas ){ // este useEffect se dispara solo si ya se cargaron las tablas generales
 
-                setDatosParaImpresiones(datosDelRecordset)
-
-                setContadorOperaciones(contadorOperaciones+1); // modifico contadorOperaciones para que se dispare el effect que busca materias e instrumentos una vez que se hayan cargado primero los datos del alumno. De esta forma ordeno secuencialmente la carga de datos y evito el warning de react "Can't perform a React state update on an unmounted component"
-                setCargandoDatosAlumno(false)
-
-                return(datosDelRecordset)
-            }catch(err){
-
-                console.log(err)
-                const mensaje_html = `${err}`
-                Swal.fire({
-                    html:mensaje_html,
-                    icon: 'warning',
-                    confirmButtonColor: '#3085d6',
-                })   
-            
-                setCargandoDatosAlumno(false)
-                setHuboError(true)
+            if (id_alumno){ //  si se recibió el nùmero de alumno por propiedad es decir si es una modificación
+                
+                setTituloAbm('');
+                setTituloCerrar('Cerrar la ficha del alumno');
+                completarDatosDelAlumno(id_alumno)
+                .then(datos=>{
+                    setProvincias(vectorProvincias.filter(item=>item.id_pais==datos.id_pais))
+                }) 
+                
             }
+            else if (id_copia){
+                setTituloAbm(`Copiar el alumno #${id_copia}`);
+                setTituloCerrar('Cerrar la ficha del alumno');
+                completarDatosDelAlumno(id_copia); 
+            }
+            else{ //  si no recibió el nùmero de curso por propiedad, es decir un alta
+                setTituloAbm(`Crear un nuevo alumno`);
+                setTituloCerrar('Cancelar');
+                hacerScroll("nuevo-alumno");
+                cargarProvinciasArgentina();
+                setObjetoInicializacion({...objetoInicializacion}) 
 
-    }
+                hacerfocoEnPrimerInput('abm-nombre')
 
-    if (tablasCargadas ){ // este useEffect se dispara solo si ya se cargaron las tablas generales
-
-        if (id_alumno){ //  si se recibió el nùmero de alumno por propiedad es decir si es una modificación
-            
-            setTituloAbm('');
-            setTituloCerrar('Cerrar la ficha del alumno');
-            completarDatosDelAlumno(id_alumno)
-            .then(datos=>{
-                setProvincias(vectorProvincias.filter(item=>item.id_pais==datos.id_pais))
-            }) 
-            
-        }
-        else if (id_copia){
-            setTituloAbm(`Copiar el alumno #${id_copia}`);
-            setTituloCerrar('Cerrar la ficha del alumno');
-            completarDatosDelAlumno(id_copia); 
-        }
-        else{ //  si no recibió el nùmero de curso por propiedad, es decir un alta
-            setTituloAbm(`Crear un nuevo alumno`);
-            setTituloCerrar('Cancelar');
-            hacerScroll("nuevo-alumno");
-            cargarProvinciasArgentina();
-            
-            let anioNacimientoDefaultAlta=anioNacimientoAlta();
-
-            setObjetoInicializacion({...objetoInicializacion,anio:anioNacimientoDefaultAlta}) 
-
-            hacerfocoEnPrimerInput('abm-nombre')
-
-        }
-    }
-
-},[tablasCargadas,id_alumno,contadorModificaciones])     
-  
-useEffect(()=>{
-    
-   if (id_alumno){
-    buscarMateriasAprobadasEinstrumentosAlumno()
-    // quito hacer scroll porque es molesto el movimiento e innecesario
-    //.then(()=> hacerScroll('ref-ficha'))
-   } 
-
-
-},[contadorOperaciones])
-
-
-useEffect(()=>{ // hago esto para evitar el warning de can't perform... creo un effect para el mismo evento para que se ejecuten llamadas asincrónicas en distintos threads
-                // podría haberlo agregado el effect que también se dispara con el mismo cambio contadorOperaciones pero para que sea más claro lo hice en dos efectos distintos pero disparados por el mismo cambio
-    let mounted = true;
-
-    if (mounted && id_alumno){ // buscar el historial solo si esta montado y si hay un id_alumno, si es un alta no buscar todavía el historial
-        setBuscarHistorial(true)
-    }
-    
-    return ()=> mounted = false
- },[contadorOperaciones]) 
-
-const handleNivelIChange=(e,instrumento)=>{
-
-    const nuevo_id_nivel_instrumental = e.target.value; // en e.target.value traigo el nuevo id nivel instrumental
-
-    const copia = [...instrumentosAlumno] //en copia replico el actual estado del vector de instrumentos del alumno
-    
-    const datosNuevoInstrumental= nivelesI // en datosNuevoEnsamble traigo los datos del nuevo id instrumental que interesa especialmente el nombre para actualizar luego el vector de instrumentos del alumno
-                    .filter(item=>item.id_nivel_instrumental==nuevo_id_nivel_instrumental)[0];
-
-    const copiaActualizada = copia // en copiaActualizada recorro copia y al detectar el id de instrumento a modificar recupero el objeto de esa posición y modifico el id instrumental y el nombre del nuevo id instrumental
-            .map(item=>
-                item.id_instrumento==instrumento ? 
-                {...item,id_nivel_instrumental:nuevo_id_nivel_instrumental,nivel_i:datosNuevoInstrumental.nombre} 
-                : item)
-    // actualizo el estado
-    setInstrumentosAlumno(copiaActualizada) 
-    
-    setHuboCambiosInstrumentos(true)
-}
-
-const handleNivelEChange=(e,instrumento)=>{
-
-    const nuevo_id_nivel_ensamble = e.target.value; // en e.target.value traigo el nuevo id nivel ensamble
-
-    const copia = [...instrumentosAlumno] //en copia replico el actual estado del vector de instrumentos del alumno
-    
-    const datosNuevoEnsamble = nivelesE // en datosNuevoEnsamble traigo los datos del nuevo id ensamble que interesa especialmente el nombre para actualizar luego el vector de instrumentos del alumno
-                    .filter(item=>item.id_nivel_ensamble==nuevo_id_nivel_ensamble)[0];
-
-    const copiaActualizada = copia // en copiaActualizada recorro copia y al detectar el id de instrumento a modificar recupero el objeto de esa posición y modifico el id ensamble y el nombre del nuevo id ensamble
-            .map(item=>
-                item.id_instrumento==instrumento ? 
-                {...item,id_nivel_ensamble:nuevo_id_nivel_ensamble,nivel_e:datosNuevoEnsamble.nombre} 
-                : item)
-    // actualizo el estado
-    setInstrumentosAlumno(copiaActualizada)
-
-    setHuboCambiosInstrumentos(true)
-}
-
-const iniciarVisualizarCurso = (curso)=>{
-    setIdCursoSeleccionado(curso.nro_curso)
-    refcurso.current = curso
-    toggle()
- }
-
-const restaurarMaterias=()=>{
-    setMateriasTestAlumno(backupMateriasTestAlumno)
-    setHuboCambiosMaterias(false)
-}
-
-const restaurarInstrumentos=()=>{
-    setInstrumentosAlumno(backupInstrumentosAlumno)
-    setHuboCambiosInstrumentos(false)
-}
-
-const handleChangeCarreras = (e)=>{
-    const carreraAlumno = carrerasAlumno.some(item=>item.id_carrera==e.target.value)
-    
-    let copia;
-
-    if(carreraAlumno){
-        copia = carrerasAlumno.filter(item=>item.id_carrera!=e.target.value)
-    }else{
-        copia = [...carrerasAlumno,{id_carrera:e.target.value}]
-    }
-
-    setCarrerasAlumno(copia)
-}
-
-const buscarMateriasAprobadasEinstrumentosAlumno = async ()=>{
-
-    try{
-        setCargandoMateriasInstrumentos(true)
-        const vectorResultado = await Promise.all([Axios.get(`/api/alumnos/materiastest/${id_alumno}`),
-                                                Axios.get(`/api/alumnos/instrumentos/${id_alumno}`),
-                                                Axios.get(`/api/alumnos/historial/${id_alumno}/1/1`),
-                                                Axios.get(`/api/alumnos/cursosborrados/${id_alumno}`),
-                                                Axios.get(`/api/alumnos/conciertosfinales/${id_alumno}`),
-                                                Axios.get(`/api/alumnos/carreras/${id_alumno}`),
-                                            //    Axios.get(`/api/tablasgenerales/cobranzas/alumno/${id_alumno}/1`),
-                                            //    Axios.get(`/api/tablasgenerales/becas/alumno/${id_alumno}`),
-                                            //    Axios.get(`/api/tablasgenerales/becas`)
-                                            ])
-    
-
-        if (vectorResultado[1].data.some(item=>item.id_instrumento>0))
-        {
-            setInstrumentosAlumno(vectorResultado[1].data)
-            setBackupInstrumentosAlumno(vectorResultado[1].data)
-        }            
-
-        setMateriasTestAlumno(vectorResultado[0].data)
-        setBackupMateriasTestAlumno(vectorResultado[0].data)
-
-        setHistorial(vectorResultado[2].data)
-        setCursosBorrados(vectorResultado[3].data)
-        setConciertos({concierto1:vectorResultado[4].data.concierto_final_1,concierto2:vectorResultado[4].data.concierto_final_2})
-        setCarrerasAlumno(vectorResultado[5].data)
-
-        setCargandoMateriasInstrumentos(false)
-        setHuboCambiosInstrumentos(false)
-        setHuboCambiosMaterias(false)
-
-        //setCobranzasAlumno(vectorResultado[6].data)
-        //setBecasAlumno(vectorResultado[7].data)
-        //setBecas(vectorResultado[8].data)
-
-        return(true)
-
-    }catch(err){
-        console.log(err)
-        const mensaje_html = 'ddd'
-        Swal.fire({
-            html:mensaje_html,
-            icon: 'warning',
-            confirmButtonColor: '#3085d6',
-        })   
-    
-        setCargandoMateriasInstrumentos(false)
-        setHuboError(true)
-    }
-}
-
-const iniciarEliminarAlumno = (curso,id_alumno)=>{
-   
-    Swal.fire({
-        text:`¿Confirma la baja del curso ${curso.mensaje} ${curso.DiaHora}?`,
-        showCancelButton:true,
-        confirButtonText:'Si, eliminar',
-        cancelButtonText:'Cancelar'
-    }).then(
-        resultado=>{
-            if (resultado.value){
-                eliminarAlumno(curso.nro_curso,id_alumno);
-
-            }else{
-                console.log("Se canceló la eliminación de la inscripción")
             }
         }
-    )
-}
 
-const iniciarRecuperarCurso = (curso)=>{
-   
-    if (curso.alerta==0){
-        alert('No se puede reinscribir a un curso de un cuatrimestre inactivo')
-        return
-    }
-
-    Swal.fire({
-        text:`¿Confirma la reinscripción a ${curso.descripcion}?`,
-        showCancelButton:true,
-        confirButtonText:'Si, reinscribir',
-        cancelButtonText:'Cancelar'
-    }).then(
-        resultado=>{
-            if (resultado.value){
-                recuperarCursada(curso.nro_curso,id_alumno);
-
-            }else{
-                console.log("Se canceló la reinscripción")
-            }
-        }
-    )
-}
-
-const recuperarCursada = async (nro_curso,id_alumno)=>{
-
-    const _urlRecuperar = `/api/alumnos/recuperarcursoborrado/${Number(id_alumno)}/${Number(nro_curso)}`
-
-    try{
-        const resultadoDelCambio = await Axios.put(_urlRecuperar)
-
-        setContadorModificaciones(contadorModificaciones+1)
-        refrescarAlumno() // para que si hay un alumno seleccionado en el bottom vuelva a buscar las cursadas del mismo
-        const mensaje_html = `<p>Se reinscribió al alumno con éxito</p>`
-
-        Swal.fire({
-            html:mensaje_html,
-            icon: 'warning',
-            timer:1500,
-            confirmButtonColor: '#3085d6',
-          })
+    },[tablasCargadas,id_alumno,contadorModificaciones])     
+    
+    useEffect(()=>{
+        
+    if (id_alumno){
+        buscarMateriasAprobadasEinstrumentosAlumno()
+        // quito hacer scroll porque es molesto el movimiento e innecesario
+        //.then(()=> hacerScroll('ref-ficha'))
+    } 
 
 
-    }catch(err){
-        const mensaje_html = `<p>La reinscripción al curso falló</p><p>${JSON.stringify(err.response.data.message)}</p>`
-
-        Swal.fire({
-            html:mensaje_html,
-            text: err.response.data,
-            icon: 'warning',
-            confirmButtonColor: '#3085d6',
-          })
-
-        }
-}
-
-const eliminarAlumno = async (nro_curso,id_alumno)=>{
-
-      const _urlEliminar = `/api/cursos/alumno/${Number(nro_curso)}/${Number(id_alumno)}`
-  
-      try{
-          const resultadoDelCambio = await Axios.delete(_urlEliminar)
-  
-          setContadorModificaciones(contadorModificaciones+1)
-          refrescarAlumno() // para que si hay un alumno seleccionado en el bottom vuelva a buscar las cursadas del mismo
-          const mensaje_html = `<p>Se eliminó al alumno del curso</p>`
-  
-          Swal.fire({
-              html:mensaje_html,
-              icon: 'warning',
-              timer:1500,
-              confirmButtonColor: '#3085d6',
-            })
-  
- 
-      }catch(err){
-          const mensaje_html = `<p>La eliminación del curso falló</p><p>${err.response.data}</p>`
-  
-          Swal.fire({
-              html:mensaje_html,
-              text: err.response.data,
-              icon: 'warning',
-              confirmButtonColor: '#3085d6',
-            })
-  
-          }
-  }
-
-const grabarAlumno = async (values)=>{
+    },[contadorOperaciones])
 
 
+    useEffect(()=>{ // hago esto para evitar el warning de can't perform... creo un effect para el mismo evento para que se ejecuten llamadas asincrónicas en distintos threads
+                    // podría haberlo agregado el effect que también se dispara con el mismo cambio contadorOperaciones pero para que sea más claro lo hice en dos efectos distintos pero disparados por el mismo cambio
+        let mounted = true;
 
-    if (agregarInstrumento || agregarMateria){
-
-        let mensaje_validacion = `${agregarMateria ? '<p>Falta confirmar una materia. Agregue o cancele la materia seleccionada</p>' : '<p>Falta confirmar un instrumento.Agregue o cancele el instrumento seleccionado</p>'}`
-
-        Swal.fire({
-            html:mensaje_validacion,
-            icon: 'warning',
-            confirmButtonColor: '#3085d6',
-        }) 
-
-        return
-    }
-
-   
-
-    let resultado;
-    let id_alumno_interno;
-    let nombre_interno = `${values.apellido}, ${values.nombre}`
-    // me veo ogligado formatear el objeto que envío para grabar porque
-    // los ids deben ser numéricos ya que se validan como números pero cuando el valor
-    // viene de un "value" de un select por ejemplo se convierten a string
-    // entonces antes de enviar el objeto hay que formatearlo
-
-    const objetoAgrabar = { datosgenerales: {
-                nombre: values.nombre,
-                apellido: values.apellido,
-                nacionalidad:values.nacionalidad,
-                provincia:Number(values.provincia),
-                pais:Number(values.pais),
-                anio:Number(values.anio),
-                mes:Number(values.mes),
-                dia:Number(values.dia),
-                domicilio:values.domicilio,
-                domicilio2:values.domicilio2,
-                localidad:values.localidad,
-                codpostal:values.codpostal,
-                sexo:values.sexo,
-                documento:values.documento,
-                telefono:values.telefono,
-                telef_laboral:values.telef_laboral,
-                telef_alternativo:values.telef_alternativo,
-                celular:values.celular,
-                email:values.email,
-                email_secundario:values.email_secundario,
-                obs_finanzas:values.obs_finanzas,
-                habilitado_web:values.habilitado_web
-            },
-            materias: materiasTestAlumno,
-            instrumentos:instrumentosAlumno
-        }
-
-    setGrabandoDatosAlumno(true)
-
-    let mensaje_html = `<p>Los datos se grabaron exitosamente</p>`
-    const esAlta = id_alumno ? false : true;
-
-    try{
-        if (!esAlta){
-            resultado= await Axios.put(`/api/alumnos/${id_alumno}`,objetoAgrabar)
-            id_alumno_interno = id_alumno; // es el id del alumno a modificar
-        }else{
-            resultado= await Axios.post(`/api/alumnos`,objetoAgrabar)
-            id_alumno_interno = resultado.data.id_alumno; // es el id del nuevo alumno 
-            mensaje_html = `<p>Los datos se grabaron exitosamente</p><p>(Nuevo alumno #${resultado.data.id_alumno})</p>`
-        }
-
-        if(!grabarSoloDatos){ // viene de listado de emails validados solamente
-            grabarOtrosConceptos(id_alumno_interno,nombre_interno,esAlta); // le paso el id interno y el nombre para que en alta se pueda seleccionar al alumno en el context y asì se pueda ir directo a inscripciones
-        }else{
-            finalizarAltaOcopia()
+        if (mounted && id_alumno){ // buscar el historial solo si esta montado y si hay un id_alumno, si es un alta no buscar todavía el historial
+            setBuscarHistorial(true)
         }
         
-        Swal.fire({
-            html:mensaje_html,
-            icon: 'warning',
-            confirmButtonColor: '#3085d6',
-        })   
-        setGrabandoDatosAlumno(false)
-    }catch(err){
-        console.log(err.response)
-        const mensaje_html = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response.data.message}</p>`
+        return ()=> mounted = false
+    },[contadorOperaciones]) 
 
+    const handleNivelIChange=(e,instrumento)=>{
 
-        Swal.fire({
-            html:mensaje_html,
-            icon: 'warning',
-            confirmButtonColor: '#3085d6',
-        })   
+        const nuevo_id_nivel_instrumental = e.target.value; // en e.target.value traigo el nuevo id nivel instrumental
+
+        const copia = [...instrumentosAlumno] //en copia replico el actual estado del vector de instrumentos del alumno
+        
+        const datosNuevoInstrumental= nivelesI // en datosNuevoEnsamble traigo los datos del nuevo id instrumental que interesa especialmente el nombre para actualizar luego el vector de instrumentos del alumno
+                        .filter(item=>item.id_nivel_instrumental==nuevo_id_nivel_instrumental)[0];
+
+        const copiaActualizada = copia // en copiaActualizada recorro copia y al detectar el id de instrumento a modificar recupero el objeto de esa posición y modifico el id instrumental y el nombre del nuevo id instrumental
+                .map(item=>
+                    item.id_instrumento==instrumento ? 
+                    {...item,id_nivel_instrumental:nuevo_id_nivel_instrumental,nivel_i:datosNuevoInstrumental.nombre} 
+                    : item)
+        // actualizo el estado
+        setInstrumentosAlumno(copiaActualizada) 
+        
+        setHuboCambiosInstrumentos(true)
+    }
+
+    const handleNivelEChange=(e,instrumento)=>{
+
+        const nuevo_id_nivel_ensamble = e.target.value; // en e.target.value traigo el nuevo id nivel ensamble
+
+        const copia = [...instrumentosAlumno] //en copia replico el actual estado del vector de instrumentos del alumno
+        
+        const datosNuevoEnsamble = nivelesE // en datosNuevoEnsamble traigo los datos del nuevo id ensamble que interesa especialmente el nombre para actualizar luego el vector de instrumentos del alumno
+                        .filter(item=>item.id_nivel_ensamble==nuevo_id_nivel_ensamble)[0];
+
+        const copiaActualizada = copia // en copiaActualizada recorro copia y al detectar el id de instrumento a modificar recupero el objeto de esa posición y modifico el id ensamble y el nombre del nuevo id ensamble
+                .map(item=>
+                    item.id_instrumento==instrumento ? 
+                    {...item,id_nivel_ensamble:nuevo_id_nivel_ensamble,nivel_e:datosNuevoEnsamble.nombre} 
+                    : item)
+        // actualizo el estado
+        setInstrumentosAlumno(copiaActualizada)
+
+        setHuboCambiosInstrumentos(true)
+    }
+
+    const iniciarVisualizarCurso = (curso)=>{
+        setIdCursoSeleccionado(curso.nro_curso)
+        refcurso.current = curso
+        toggle()
+    }
+
+    const restaurarMaterias=()=>{
+        setMateriasTestAlumno(backupMateriasTestAlumno)
+        setHuboCambiosMaterias(false)
+    }
+
+    const restaurarInstrumentos=()=>{
+        setInstrumentosAlumno(backupInstrumentosAlumno)
+        setHuboCambiosInstrumentos(false)
+    }
+
+    const handleChangeCarreras = (e)=>{
+        const carreraAlumno = carrerasAlumno.some(item=>item.id_carrera==e.target.value)
+        
+        let copia;
+
+        if(carreraAlumno){
+            copia = carrerasAlumno.filter(item=>item.id_carrera!=e.target.value)
+        }else{
+            copia = [...carrerasAlumno,{id_carrera:e.target.value}]
+        }
+
+        setCarrerasAlumno(copia)
+    }
+
+    const buscarMateriasAprobadasEinstrumentosAlumno = async ()=>{
+
+        try{
+            setCargandoMateriasInstrumentos(true)
+            const vectorResultado = await Promise.all([Axios.get(`/api/alumnos/materiastest/${id_alumno}`),
+                                                    Axios.get(`/api/alumnos/instrumentos/${id_alumno}`),
+                                                    Axios.get(`/api/alumnos/historial/${id_alumno}/1/1`),
+                                                    Axios.get(`/api/alumnos/cursosborrados/${id_alumno}`),
+                                                    Axios.get(`/api/alumnos/conciertosfinales/${id_alumno}`),
+                                                    Axios.get(`/api/alumnos/carreras/${id_alumno}`),
+                                                //    Axios.get(`/api/tablasgenerales/cobranzas/alumno/${id_alumno}/1`),
+                                                //    Axios.get(`/api/tablasgenerales/becas/alumno/${id_alumno}`),
+                                                //    Axios.get(`/api/tablasgenerales/becas`)
+                                                ])
+        
+
+            if (vectorResultado[1].data.some(item=>item.id_instrumento>0))
+            {
+                setInstrumentosAlumno(vectorResultado[1].data)
+                setBackupInstrumentosAlumno(vectorResultado[1].data)
+            }            
+
+            setMateriasTestAlumno(vectorResultado[0].data)
+            setBackupMateriasTestAlumno(vectorResultado[0].data)
+
+            setHistorial(vectorResultado[2].data)
+            setCursosBorrados(vectorResultado[3].data)
+            setConciertos({concierto1:vectorResultado[4].data.concierto_final_1,concierto2:vectorResultado[4].data.concierto_final_2})
+            setCarrerasAlumno(vectorResultado[5].data)
+
+            setCargandoMateriasInstrumentos(false)
+            setHuboCambiosInstrumentos(false)
+            setHuboCambiosMaterias(false)
+
+            //setCobranzasAlumno(vectorResultado[6].data)
+            //setBecasAlumno(vectorResultado[7].data)
+            //setBecas(vectorResultado[8].data)
+
+            return(true)
+
+        }catch(err){
+            console.log(err)
+            const mensaje_html = 'ddd'
+            Swal.fire({
+                html:mensaje_html,
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+            })   
+        
+            setCargandoMateriasInstrumentos(false)
+            setHuboError(true)
+        }
+    }
+
+    const iniciarEliminarAlumno = (curso,id_alumno)=>{
     
-        setGrabandoDatosAlumno(false)
-    }
-   
-
-}
-
-
-
-const cambiarAmpliado = (ampliado)=>{
-    setHistorialAmpliado(ampliado)
-}
-
-const finalizarAltaBeca = ()=>{
-    setContadorOperaciones(contadorOperaciones+1); // modifico contadorOperaciones para que se dispare el effect que busca materias e instrumentos una vez que se hayan cargado primero los datos del alumno. De esta forma ordeno secuencialmente la carga de datos y evito el warning de react "Can't perform a React state update on an unmounted component"
-    toggle()
-}
-
-const vincularInstrumentosAlAlumno = async (id_alumno_interno,nombre)=>{ // recibo en id_interno el id del alumno sea el nuevo recién creado o el id del alumno que estamos moficando
-    try{
-
-
-        const resultado = await Axios.post(`/api/alumnos/vincularInstrumentos/${id_alumno_interno}`)
-
-        // Evito mostrar la confirmación de instrumentos y materias
-        // En principio solo confirmo 1 sola vez por todo. Si llegase a fallar aqui
-        // se va a mostrar el mensaje de error en el catch.
-        /*Swal.fire({
-            html:mensaje_html,
-            icon: 'warning',
-            confirmButtonColor: '#3085d6',
-        })   */ 
-        if (esModal){
-            if(id_alumno){
-                setContadorModificaciones(contadorModificaciones+1)
-                finalizarAltaOcopia(false)
-            }else{
-                finalizarAltaOcopia(true,id_alumno_interno,nombre)
-            }
-
-        }else{
-            finalizarAltaOcopia(true); // es una función que se ejecuta en el padre para ejecutar una acción luego de haber creado o copiado un curso
-        }
-
-    }catch(err){
-        let mensaje_html_error;
-
-        if(err.response.data.message){
-            mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response.data.message}</p>`
-        }else if (err.response.data) {
-            mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response.data}</p>`
-        }else{
-            mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response}</p>`
-        }
-
-
         Swal.fire({
-            html:mensaje_html_error,
-            icon: 'warning',
-            confirmButtonColor: '#3085d6',
-        })   
-    }
-} 
+            text:`¿Confirma la baja del curso ${curso.mensaje} ${curso.DiaHora}?`,
+            showCancelButton:true,
+            confirButtonText:'Si, eliminar',
+            cancelButtonText:'Cancelar'
+        }).then(
+            resultado=>{
+                if (resultado.value){
+                    eliminarAlumno(curso.nro_curso,id_alumno);
 
-const grabarOtrosConceptos = async (id_alumno_interno, nombre,esAlta)=>{ // recibo en id_interno el id del alumno sea el nuevo recién creado o el id del alumno que estamos moficando
-    try{
-        let mensaje_html = `<p>Los instrumentos y materias se grabaron exitosamente</p>`
-
-        const objetoAgrabar={instrumentos:instrumentosAlumno,
-                              materias:materiasTestAlumno}
-
-        const objetoCarrerasAgrabar={carreras:carrerasAlumno}
-
-        const concierto1 = conciertos.concierto1 ? 1 : 0;
-        const concierto2 = conciertos.concierto2 ? 1 : 0;
-         
-        const resultado1 = await Axios.post(`/api/alumnos/instrumentosmaterias/${id_alumno_interno}`,objetoAgrabar)
-        const resultado2 = await Axios.put(`/api/alumnos/vincularinstrumentos/${id_alumno_interno}`)
-        const resultado3 = await Axios.put(`/api/alumnos/conciertosfinales/${id_alumno_interno}/${concierto1}/${concierto2}`)
-        const resultado4 = await Axios.post(`/api/alumnos/carreras/${id_alumno_interno}`,objetoCarrerasAgrabar)
-
-        if (esModal){
-            if(id_alumno){
-                setContadorModificaciones(contadorModificaciones+1)
-                finalizarAltaOcopia(false)
-            }else{
-                finalizarAltaOcopia(true,id_alumno_interno,nombre)
-            }
-
-        }else{
-            finalizarAltaOcopia(true); // es una función que se ejecuta en el padre para ejecutar una acción luego de haber creado o copiado un curso
-        }
-
-    }catch(err){
-        let mensaje_html_error;
-
-        if(err.response.data.message){
-            mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response.data.message}</p>`
-        }else if (err.response.data) {
-            mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response.data}</p>`
-        }else{
-            mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response}</p>`
-        }
-
-
-        Swal.fire({
-            html:mensaje_html_error,
-            icon: 'warning',
-            confirmButtonColor: '#3085d6',
-        }).then(()=>{
-
-            // agrego el cierre del modal si hubo un error solo en el caso de un alta de un alumno por el hecho de que si no se cierra
-            // el usuario puede hacer click en el botón grabar N veces y dar de alta muchos alumnos
-            // si es una modificación muestro el mensaje de error pero no hace falta cerrarlo
-            if (esModal){
-                if(esAlta){
-                    setContadorModificaciones(contadorModificaciones+1)
-                    finalizarAltaPorError()
+                }else{
+                    console.log("Se canceló la eliminación de la inscripción")
                 }
+            }
+        )
+    }
+
+    const iniciarRecuperarCurso = (curso)=>{
     
-            }else{
-                finalizarAltaPorError(); // es una función que se ejecuta en el padre para ejecutar una acción luego de haber creado o copiado un curso
+        if (curso.alerta==0){
+            alert('No se puede reinscribir a un curso de un cuatrimestre inactivo')
+            return
+        }
+
+        Swal.fire({
+            text:`¿Confirma la reinscripción a ${curso.descripcion}?`,
+            showCancelButton:true,
+            confirButtonText:'Si, reinscribir',
+            cancelButtonText:'Cancelar'
+        }).then(
+            resultado=>{
+                if (resultado.value){
+                    recuperarCursada(curso.nro_curso,id_alumno);
+
+                }else{
+                    console.log("Se canceló la reinscripción")
+                }
             }
-        })   
+        )
     }
-} 
 
-const handleMateriaSeleccionada=(e)=>{
-    setMateriaSeleccionada(e.target.value)
-}
+    const recuperarCursada = async (nro_curso,id_alumno)=>{
 
-const handleInstrumentoSeleccionado=(e)=>{
-    setInstrumentoSeleccionado(e.target.value)
-}
+        const _urlRecuperar = `/api/alumnos/recuperarcursoborrado/${Number(id_alumno)}/${Number(nro_curso)}`
 
-const handleInstPrincipalChange=(e)=>{
-    const copia = instrumentosAlumno.map(item=>{if(item.id_instrumento==e.target.value){
-        return {...item,inst_principal:true}
-    }else{
-        return {...item,inst_principal:false}
-    }})
+        try{
+            const resultadoDelCambio = await Axios.put(_urlRecuperar)
 
-    setInstrumentosAlumno(copia)
-    setHuboCambiosInstrumentos(true)
-}
+            setContadorModificaciones(contadorModificaciones+1)
+            refrescarAlumno() // para que si hay un alumno seleccionado en el bottom vuelva a buscar las cursadas del mismo
+            const mensaje_html = `<p>Se reinscribió al alumno con éxito</p>`
 
-const modificarMateriasAprobadas =(e)=>{
+            Swal.fire({
+                html:mensaje_html,
+                icon: 'warning',
+                timer:1500,
+                confirmButtonColor: '#3085d6',
+            })
 
-    const yaExiste = materiasTestAlumno.findIndex(item=>item.id_materia==materiaSeleccionada)
 
-    if (yaExiste!=-1){
-        setErrorMateria('La materia ya figura como aprobada')
-        return
-    }else{
-        setErrorMateria(null)
+        }catch(err){
+            const mensaje_html = `<p>La reinscripción al curso falló</p><p>${JSON.stringify(err.response.data.message)}</p>`
+
+            Swal.fire({
+                html:mensaje_html,
+                text: err.response.data,
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+            })
+
+            }
     }
-     // para que cierre el select de materias
-    setAgregarMateria(false);
 
-    // para encontrar la materia seleccionada en el vector de materias
-    const nuevaMateria = materias.filter(item=>item.id_materia==materiaSeleccionada)
+    const eliminarAlumno = async (nro_curso,id_alumno)=>{
 
-    // para agregar la materia nueva con la función del use state
-    setMateriasTestAlumno([...materiasTestAlumno,...nuevaMateria])
-
-    // para hacer que lista de materias vuelva al valor "seleccionar"
-    setMateriaSeleccionada(-1)
-
-    setHuboCambiosMaterias(true)
-}
-
-const modificarInstrumentosYniveles =()=>{
-
-    const yaExiste = instrumentosAlumno.findIndex(item=>item.id_instrumento==instrumentoSeleccionado)
-
-    if (yaExiste!=-1){
-        setErrorInstrumento('El instrumento ya figura en la lista del alumno')
-        return
-    }else{
-        setErrorInstrumento(null)
+        const _urlEliminar = `/api/cursos/alumno/${Number(nro_curso)}/${Number(id_alumno)}`
+    
+        try{
+            const resultadoDelCambio = await Axios.delete(_urlEliminar)
+    
+            setContadorModificaciones(contadorModificaciones+1)
+            refrescarAlumno() // para que si hay un alumno seleccionado en el bottom vuelva a buscar las cursadas del mismo
+            const mensaje_html = `<p>Se eliminó al alumno del curso</p>`
+    
+            Swal.fire({
+                html:mensaje_html,
+                icon: 'warning',
+                timer:1500,
+                confirmButtonColor: '#3085d6',
+                })
+    
+    
+        }catch(err){
+            const mensaje_html = `<p>La eliminación del curso falló</p><p>${err.response.data}</p>`
+    
+            Swal.fire({
+                html:mensaje_html,
+                text: err.response.data,
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+                })
+    
+            }
     }
-     // para que cierre el select de instrumentos
-     setAgregarInstrumento(false);
 
-    // para encontrar el instrumento seleccionado en el vector de instrumentos
-    const nuevoInstrumento = instrumentos.filter(item=>item.id_instrumento==instrumentoSeleccionado)
+    const grabarAlumno = async (values)=>{
 
-    // si se agrega un instrumento nuevo y es el único entonces es por default el instrumento principal
-    // si ya había instrumentos por default entonces por default el nuevo intrumento no es el principal 
-    const status_principal = instrumentosAlumno.length==0 ? true : false;
+        if (agregarInstrumento || agregarMateria){
 
-    const objetoAagregar = {instrumentos:nuevoInstrumento[0].nombre,
-                            id_instrumento:instrumentoSeleccionado,
-                            id_nivel_ensamble:0,
-                            id_nivel_instrumental:0,
-                            nivel_e:'..',
-                            nivel_i:'..',
-                            inst_principal:status_principal}
-    // para agregar el instrumento nuevo con la función del use state
-    setInstrumentosAlumno([...instrumentosAlumno, objetoAagregar])
+            let mensaje_validacion = `${agregarMateria ? '<p>Falta confirmar una materia. Agregue o cancele la materia seleccionada</p>' : '<p>Falta confirmar un instrumento.Agregue o cancele el instrumento seleccionado</p>'}`
 
-    // para hacer que lista de instrumentos vuelva al valor "seleccionar"
-    setInstrumentoSeleccionado(-1)
+            Swal.fire({
+                html:mensaje_validacion,
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+            }) 
 
-    setHuboCambiosInstrumentos(true)
-}
+            return
+        }
 
-const excluirMateria = (id)=>{
+    
 
-    const nuevaLista = materiasTestAlumno.filter(item=>item.id_materia!=id)
-    setHuboCambiosMaterias(true)
-    setMateriasTestAlumno([...nuevaLista])
-}
+        let resultado;
+        let id_alumno_interno;
+        let nombre_interno = `${values.apellido}, ${values.nombre}`
+        // me veo ogligado formatear el objeto que envío para grabar porque
+        // los ids deben ser numéricos ya que se validan como números pero cuando el valor
+        // viene de un "value" de un select por ejemplo se convierten a string
+        // entonces antes de enviar el objeto hay que formatearlo
 
-const excluirInstrumento = (id)=>{
-    const nuevaLista = instrumentosAlumno.filter(item=>item.id_instrumento!=id)
-    //analizo si al borrar queda solo 1 instrumeto entonces lo asigno como el principal
-    if (nuevaLista.length==1){
-        nuevaLista[0] = {...nuevaLista[0],inst_principal:true}
-    }else if (nuevaLista.length>1){
-        // también analizo si se borró el principal y hay más instrumentos asigno al primero como principal
-        const hayInstPrincipal = nuevaLista.some(item=>item.inst_principal==true)
-        if(!hayInstPrincipal){
+        const objetoAgrabar = { datosgenerales: {
+                    nombre: values.nombre,
+                    apellido: values.apellido,
+                    nacionalidad:values.nacionalidad,
+                    provincia:Number(values.provincia),
+                    pais:Number(values.pais),
+                    anio:Number(values.anio),
+                    mes:Number(values.mes),
+                    dia:Number(values.dia),
+                    domicilio:values.domicilio,
+                    domicilio2:values.domicilio2,
+                    localidad:values.localidad,
+                    codpostal:values.codpostal,
+                    sexo:values.sexo,
+                    documento:values.documento,
+                    telefono:values.telefono,
+                    telef_laboral:values.telef_laboral,
+                    telef_alternativo:values.telef_alternativo,
+                    celular:values.celular,
+                    email:values.email,
+                    email_secundario:values.email_secundario,
+                    obs_finanzas:values.obs_finanzas,
+                    habilitado_web:values.habilitado_web
+                },
+                materias: materiasTestAlumno,
+                instrumentos:instrumentosAlumno
+            }
+
+        setGrabandoDatosAlumno(true)
+
+        let mensaje_html = `<p>Los datos se grabaron exitosamente</p>`
+        const esAlta = id_alumno ? false : true;
+
+        try{
+            if (!esAlta){
+                resultado= await Axios.put(`/api/alumnos/${id_alumno}`,objetoAgrabar)
+                id_alumno_interno = id_alumno; // es el id del alumno a modificar
+            }else{
+                resultado= await Axios.post(`/api/alumnos`,objetoAgrabar)
+                id_alumno_interno = resultado.data.id_alumno; // es el id del nuevo alumno 
+                mensaje_html = `<p>Los datos se grabaron exitosamente</p><p>(Nuevo alumno #${resultado.data.id_alumno})</p>`
+            }
+
+            if(!grabarSoloDatos){ // viene de listado de emails validados solamente
+                grabarOtrosConceptos(id_alumno_interno,nombre_interno,esAlta); // le paso el id interno y el nombre para que en alta se pueda seleccionar al alumno en el context y asì se pueda ir directo a inscripciones
+            }else{
+                finalizarAltaOcopia()
+            }
+            
+            Swal.fire({
+                html:mensaje_html,
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+            })   
+            setGrabandoDatosAlumno(false)
+        }catch(err){
+            console.log(err.response)
+            const mensaje_html = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response.data.message}</p>`
+
+
+            Swal.fire({
+                html:mensaje_html,
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+            })   
+        
+            setGrabandoDatosAlumno(false)
+        }
+    }
+
+    const cambiarAmpliado = (ampliado)=>{
+        setHistorialAmpliado(ampliado)
+    }
+
+    const finalizarAltaBeca = ()=>{
+        setContadorOperaciones(contadorOperaciones+1); // modifico contadorOperaciones para que se dispare el effect que busca materias e instrumentos una vez que se hayan cargado primero los datos del alumno. De esta forma ordeno secuencialmente la carga de datos y evito el warning de react "Can't perform a React state update on an unmounted component"
+        toggle()
+    }
+
+    const vincularInstrumentosAlAlumno = async (id_alumno_interno,nombre)=>{ // recibo en id_interno el id del alumno sea el nuevo recién creado o el id del alumno que estamos moficando
+        try{
+
+
+            const resultado = await Axios.post(`/api/alumnos/vincularInstrumentos/${id_alumno_interno}`)
+
+            // Evito mostrar la confirmación de instrumentos y materias
+            // En principio solo confirmo 1 sola vez por todo. Si llegase a fallar aqui
+            // se va a mostrar el mensaje de error en el catch.
+            /*Swal.fire({
+                html:mensaje_html,
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+            })   */ 
+            if (esModal){
+                if(id_alumno){
+                    setContadorModificaciones(contadorModificaciones+1)
+                    finalizarAltaOcopia(false)
+                }else{
+                    finalizarAltaOcopia(true,id_alumno_interno,nombre)
+                }
+
+            }else{
+                finalizarAltaOcopia(true); // es una función que se ejecuta en el padre para ejecutar una acción luego de haber creado o copiado un curso
+            }
+
+        }catch(err){
+            let mensaje_html_error;
+
+            if(err.response.data.message){
+                mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response.data.message}</p>`
+            }else if (err.response.data) {
+                mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response.data}</p>`
+            }else{
+                mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response}</p>`
+            }
+
+
+            Swal.fire({
+                html:mensaje_html_error,
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+            })   
+        }
+    } 
+
+    const grabarOtrosConceptos = async (id_alumno_interno, nombre,esAlta)=>{ // recibo en id_interno el id del alumno sea el nuevo recién creado o el id del alumno que estamos moficando
+        try{
+            let mensaje_html = `<p>Los instrumentos y materias se grabaron exitosamente</p>`
+
+            const objetoAgrabar={instrumentos:instrumentosAlumno,
+                                materias:materiasTestAlumno}
+
+            const objetoCarrerasAgrabar={carreras:carrerasAlumno}
+
+            const concierto1 = conciertos.concierto1 ? 1 : 0;
+            const concierto2 = conciertos.concierto2 ? 1 : 0;
+            
+            const resultado1 = await Axios.post(`/api/alumnos/instrumentosmaterias/${id_alumno_interno}`,objetoAgrabar)
+            const resultado2 = await Axios.put(`/api/alumnos/vincularinstrumentos/${id_alumno_interno}`)
+            const resultado3 = await Axios.put(`/api/alumnos/conciertosfinales/${id_alumno_interno}/${concierto1}/${concierto2}`)
+            const resultado4 = await Axios.post(`/api/alumnos/carreras/${id_alumno_interno}`,objetoCarrerasAgrabar)
+
+            if (esModal){
+                if(id_alumno){
+                    setContadorModificaciones(contadorModificaciones+1)
+                    finalizarAltaOcopia(false)
+                }else{
+                    finalizarAltaOcopia(true,id_alumno_interno,nombre)
+                }
+
+            }else{
+                finalizarAltaOcopia(true); // es una función que se ejecuta en el padre para ejecutar una acción luego de haber creado o copiado un curso
+            }
+
+        }catch(err){
+            let mensaje_html_error;
+
+            if(err.response.data.message){
+                mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response.data.message}</p>`
+            }else if (err.response.data) {
+                mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response.data}</p>`
+            }else{
+                mensaje_html_error = `<p>Se produjo un error al grabar los datos del alumno</p><p>${err.response}</p>`
+            }
+
+
+            Swal.fire({
+                html:mensaje_html_error,
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+            }).then(()=>{
+
+                // agrego el cierre del modal si hubo un error solo en el caso de un alta de un alumno por el hecho de que si no se cierra
+                // el usuario puede hacer click en el botón grabar N veces y dar de alta muchos alumnos
+                // si es una modificación muestro el mensaje de error pero no hace falta cerrarlo
+                if (esModal){
+                    if(esAlta){
+                        setContadorModificaciones(contadorModificaciones+1)
+                        finalizarAltaPorError()
+                    }
+        
+                }else{
+                    finalizarAltaPorError(); // es una función que se ejecuta en el padre para ejecutar una acción luego de haber creado o copiado un curso
+                }
+            })   
+        }
+    } 
+
+    const handleMateriaSeleccionada=(e)=>{
+        setMateriaSeleccionada(e.target.value)
+    }
+
+    const handleInstrumentoSeleccionado=(e)=>{
+        setInstrumentoSeleccionado(e.target.value)
+    }
+
+    const handleInstPrincipalChange=(e)=>{
+        const copia = instrumentosAlumno.map(item=>{if(item.id_instrumento==e.target.value){
+            return {...item,inst_principal:true}
+        }else{
+            return {...item,inst_principal:false}
+        }})
+
+        setInstrumentosAlumno(copia)
+        setHuboCambiosInstrumentos(true)
+    }
+
+    const modificarMateriasAprobadas =(e)=>{
+
+        const yaExiste = materiasTestAlumno.findIndex(item=>item.id_materia==materiaSeleccionada)
+
+        if (yaExiste!=-1){
+            setErrorMateria('La materia ya figura como aprobada')
+            return
+        }else{
+            setErrorMateria(null)
+        }
+        // para que cierre el select de materias
+        setAgregarMateria(false);
+
+        // para encontrar la materia seleccionada en el vector de materias
+        const nuevaMateria = materias.filter(item=>item.id_materia==materiaSeleccionada)
+
+        // para agregar la materia nueva con la función del use state
+        setMateriasTestAlumno([...materiasTestAlumno,...nuevaMateria])
+
+        // para hacer que lista de materias vuelva al valor "seleccionar"
+        setMateriaSeleccionada(-1)
+
+        setHuboCambiosMaterias(true)
+    }
+
+    const modificarInstrumentosYniveles =()=>{
+
+        const yaExiste = instrumentosAlumno.findIndex(item=>item.id_instrumento==instrumentoSeleccionado)
+
+        if (yaExiste!=-1){
+            setErrorInstrumento('El instrumento ya figura en la lista del alumno')
+            return
+        }else{
+            setErrorInstrumento(null)
+        }
+        // para que cierre el select de instrumentos
+        setAgregarInstrumento(false);
+
+        // para encontrar el instrumento seleccionado en el vector de instrumentos
+        const nuevoInstrumento = instrumentos.filter(item=>item.id_instrumento==instrumentoSeleccionado)
+
+        // si se agrega un instrumento nuevo y es el único entonces es por default el instrumento principal
+        // si ya había instrumentos por default entonces por default el nuevo intrumento no es el principal 
+        const status_principal = instrumentosAlumno.length==0 ? true : false;
+
+        const objetoAagregar = {instrumentos:nuevoInstrumento[0].nombre,
+                                id_instrumento:instrumentoSeleccionado,
+                                id_nivel_ensamble:0,
+                                id_nivel_instrumental:0,
+                                nivel_e:'..',
+                                nivel_i:'..',
+                                inst_principal:status_principal}
+        // para agregar el instrumento nuevo con la función del use state
+        setInstrumentosAlumno([...instrumentosAlumno, objetoAagregar])
+
+        // para hacer que lista de instrumentos vuelva al valor "seleccionar"
+        setInstrumentoSeleccionado(-1)
+
+        setHuboCambiosInstrumentos(true)
+    }
+
+    const excluirMateria = (id)=>{
+
+        const nuevaLista = materiasTestAlumno.filter(item=>item.id_materia!=id)
+        setHuboCambiosMaterias(true)
+        setMateriasTestAlumno([...nuevaLista])
+    }
+
+    const excluirInstrumento = (id)=>{
+        const nuevaLista = instrumentosAlumno.filter(item=>item.id_instrumento!=id)
+        //analizo si al borrar queda solo 1 instrumeto entonces lo asigno como el principal
+        if (nuevaLista.length==1){
             nuevaLista[0] = {...nuevaLista[0],inst_principal:true}
-        }
-    }
-
-    setHuboCambiosInstrumentos(true)
-    setInstrumentosAlumno([...nuevaLista])
-}
-const cancelarAbm = ()=>{
-    if (!id_alumno){ // solo cancelo si es un alta o una copia ya que se hacen en la vista de cursos. La edición de un curso se hace en la vista de curso y siempre lo muestro
-        finalizarAltaOcopia(false)
-    }
-}
-
-const iniciarGrabarAlumno = (values)=>{
-    let texto;
-    let textoConfirmacion;
-
-    if (id_alumno){
-        texto = `Confirma la modificación del alumno ${id_alumno}?`
-        textoConfirmacion = 'Si, modificar el alumno'
-    }else{
-        texto = `Confirma la creación del nuevo alumno?`
-        textoConfirmacion = 'Si, crear el alumno'
-    }
-
-    Swal.fire({
-        text:texto,
-        showCancelButton:true,
-        confirButtonText:textoConfirmacion,
-        cancelButtonText:'Cancelar'
-    }).then(
-        resultado=>{
-            if (resultado.value){
-                grabarAlumno(values);
-
-            }else{
-                console.log("Se canceló la modificación o creación del alumno")
+        }else if (nuevaLista.length>1){
+            // también analizo si se borró el principal y hay más instrumentos asigno al primero como principal
+            const hayInstPrincipal = nuevaLista.some(item=>item.inst_principal==true)
+            if(!hayInstPrincipal){
+                nuevaLista[0] = {...nuevaLista[0],inst_principal:true}
             }
         }
-    )
-}
 
-const cargarProvinciasArgentina = ()=>{
-    const data = vectorProvincias.filter(item=>item.id_pais==1)
-    setProvincias(data)
-}
+        setHuboCambiosInstrumentos(true)
+        setInstrumentosAlumno([...nuevaLista])
+    }
+    const cancelarAbm = ()=>{
+        if (!id_alumno){ // solo cancelo si es un alta o una copia ya que se hacen en la vista de cursos. La edición de un curso se hace en la vista de curso y siempre lo muestro
+            finalizarAltaOcopia(false)
+        }
+    }
 
+    const iniciarGrabarAlumno = (values)=>{
+        let texto;
+        let textoConfirmacion;
 
-const buscarProvincias = (e,setFieldValue)=>{
+        if (id_alumno){
+            texto = `Confirma la modificación del alumno ${id_alumno}?`
+            textoConfirmacion = 'Si, modificar el alumno'
+        }else{
+            texto = `Confirma la creación del nuevo alumno?`
+            textoConfirmacion = 'Si, crear el alumno'
+        }
 
-    const pais = e.target.value
+        Swal.fire({
+            text:texto,
+            showCancelButton:true,
+            confirButtonText:textoConfirmacion,
+            cancelButtonText:'Cancelar'
+        }).then(
+            resultado=>{
+                if (resultado.value){
+                    grabarAlumno(values);
 
-    setCargandoProvincias(true); 
+                }else{
+                    console.log("Se canceló la modificación o creación del alumno")
+                }
+            }
+        )
+    }
 
-    let id_provincia;
-
-        //atención e.target.value siempre es un string.
-        // por eso aquì en este caso uso doble igual en lugar de triple igual porque item.id_encabezado es un number y encabezado es un string
-    const data = vectorProvincias.filter(item=>item.id_pais==pais)
-
-    if (data.length===1){
-        id_provincia=data[0].id_provincia;
+    const cargarProvinciasArgentina = ()=>{
+        const data = vectorProvincias.filter(item=>item.id_pais==1)
         setProvincias(data)
-        setFieldValue('provincia',id_provincia)
-    }else if (data.length>1) {
-        setProvincias([{id_provincia:-1, nombre:"Seleccionar"},...data])
-        setFieldValue('provincia',-1)
-    }else{
-        setProvincias([{id_provincia:-2, nombre:"----?----"}])
-        setFieldValue('provincia',-2)
     }
 
-    setCargandoProvincias(false); 
 
-}
+    const buscarProvincias = (e,setFieldValue)=>{
 
+        const pais = e.target.value
 
-// Se carga directamente al traer los datos del alumno
-/*const initialValuesAlumno = {
+        setCargandoProvincias(true); 
 
-} */ 
+        let id_provincia;
 
-// es un objeto cuyas propiedades deben coincidir con el nombre
-                              // de los Fields y con el nombre del validationSchema
+            //atención e.target.value siempre es un string.
+            // por eso aquì en este caso uso doble igual en lugar de triple igual porque item.id_encabezado es un number y encabezado es un string
+        const data = vectorProvincias.filter(item=>item.id_pais==pais)
 
-// algunas entidades comienzan de 1 y otras aceptan el valor 0 por eso
-// en algunos casos valido con .positive() para los que comienzan de 1, porque positive() excluye el cero
-// en otros valido con min(0) para los que comienzan de 0                              
-// el .test lo dejo como ejemplo para notar que se pueden hacer validaciones más específicas
+        if (data.length==1){
+            id_provincia=data[0].id_provincia;
+            setProvincias(data)
+            setFieldValue('provincia',id_provincia)
+        }else if (data.length>1) {
+            setProvincias([{id_provincia:-1, nombre:"Seleccionar"},...data])
+            setFieldValue('provincia',-1)
+        }else{
+            setProvincias([{id_provincia:-2, nombre:"----?----"}])
+            setFieldValue('provincia',-2)
+        }
 
-const validationSchemaAlumno = Yup.object({
+        setCargandoProvincias(false); 
 
-nombre:Yup.string().max(25,'El nombre debe tener como máximo 25 caracteres')
-        .required('Falta completar el nombre'),
-apellido:Yup.string().max(25,'El apellido debe tener como máximo 25 caracteres')
-        .required('Falta completar el apellido'),
-documento:Yup.string().typeError('El documento debe ser un número')
-    .max(15,'El documento debe tener como máximo 15 carácteres')
-    .required('Falta completar el documento'),    
-sexo:Yup.string().max(1)
-    .required('Falta completar el sexo')
-    .test("sexo","El sexo debe ser M o F",value => value === 'M' || value === 'F'),
-nacionalidad:Yup.string()
-        .required('Falta seleccionar la nacionalidad'),
-dia:Yup.number()
-    .required('Falta seleccionar el día de nacimiento'),
-mes:Yup.number()
-    .required('Falta seleccionar el mes de nacimiento'),
-anio:Yup.number()
-    .min(1940,'El año no es válido')
-    .required('Falta seleccionar el año de nacimiento'),        
-pais:Yup.number()
-    .positive('Falta seleccionar un país')
-    .required('Falta seleccionar un país')
-    .test("prueba","El código de país debe ser mayor a cero",value => value > 0),
-provincia:  Yup.number()
-    .positive('Falta seleccionar una provincia')
-    .required('Falta seleccionar una provincia')
-    .test("prueba","El código de provincia debe ser mayor a cero",value => value > 0),
-domicilio:Yup.string().max(50,'El domicilio debe tener como máximo 50 caracteres')
-    .required('Falta completar el domicilio'),            
-localidad:Yup.string().max(25,'La localidad debe tener como máximo 25 caracteres')
-    .required('Falta completar la localidad'),    
-codpostal:Yup.string().max(10,'El código postal debe tener como máximo 10 caracteres'),            
-domicilio2:Yup.string().max(50,'El domicilio 2 debe tener como máximo 50 caracteres').nullable(),
-email:Yup.string().email('El email no es válido').max(200,'El email debe tener como máximo 200 caracteres')
-    .required('Falta completar el e-mail'),            
-email_secundario:Yup.string().email('El email no es válido').max(200,'El email 2 debe tener como máximo 200 caracteres'),
-telefono:Yup.string().max(100,'El teléfono debe tener como máximo 100 caracteres')
-.test('celular','Debe completar un teléfono o celular.',function(val){
-    const {celular} = this.parent;
-  
-    if (!celular && !val){
-        return false
-    } else{
-        return true
     }
-}),
-celular:Yup.string().max(100,'El celular debe tener como máximo 100 caracteres')
-.test('celular','Debe completar un teléfono o celular.',function(val){
-    const {telefono} = this.parent;
-    if (!telefono && !val){
-        return false
-    }  else{
-        return true
-    }
-}),
-telef_alternativo:Yup.string().max(100,'El teléfono alt. debe tener como máximo 100 caracteres'),
-telef_laboral:Yup.string().max(100,'El teléfono lab. debe tener como máximo 100 caracteres'),
-obs_finanzas:Yup.string().max(1000,'Las observaciones deben tener como máximo 1000 caracteres')
-})                 
 
-const onsubmitAlumno = values =>{
-    console.log(values)
-    iniciarGrabarAlumno(values)
-}
+
+    // Se carga directamente al traer los datos del alumno
+    /*const initialValuesAlumno = {
+
+    } */ 
+
+    // es un objeto cuyas propiedades deben coincidir con el nombre
+                                // de los Fields y con el nombre del validationSchema
+
+    // algunas entidades comienzan de 1 y otras aceptan el valor 0 por eso
+    // en algunos casos valido con .positive() para los que comienzan de 1, porque positive() excluye el cero
+    // en otros valido con min(0) para los que comienzan de 0                              
+    // el .test lo dejo como ejemplo para notar que se pueden hacer validaciones más específicas
+
+    const validationSchemaAlumno = Yup.object({
+
+    nombre:Yup.string().max(25,'El nombre debe tener como máximo 25 caracteres')
+            .required('Falta completar el nombre'),
+    apellido:Yup.string().max(25,'El apellido debe tener como máximo 25 caracteres')
+            .required('Falta completar el apellido'),
+    documento:Yup.string().typeError('El documento debe ser un número')
+        .max(15,'El documento debe tener como máximo 15 carácteres')
+        .required('Falta completar el documento'),    
+    sexo:Yup.string().max(1)
+        .required('Falta completar el sexo')
+        .test("sexo","El sexo debe ser M o F",value => value === 'M' || value === 'F' || value === 'X' || value === 'N'),
+    nacionalidad:Yup.string()
+            .required('Falta seleccionar la nacionalidad'),
+    dia:Yup.number()
+        .required('Falta seleccionar el día de nacimiento'),
+    mes:Yup.number()
+        .required('Falta seleccionar el mes de nacimiento'),
+    anio:Yup.number()
+        .min(1940,'El año no es válido')
+        .required('Falta seleccionar el año de nacimiento'),        
+    pais:Yup.number()
+        .positive('Falta seleccionar un país')
+        .required('Falta seleccionar un país')
+        .test("prueba","El código de país debe ser mayor a cero",value => value > 0),
+    provincia:  Yup.number()
+        .positive('Falta seleccionar una provincia')
+        .required('Falta seleccionar una provincia')
+        .test("prueba","El código de provincia debe ser mayor a cero",value => value > 0),
+    domicilio:Yup.string().max(50,'El domicilio debe tener como máximo 50 caracteres')
+        .required('Falta completar el domicilio'),            
+    localidad:Yup.string().max(25,'La localidad debe tener como máximo 25 caracteres')
+        .required('Falta completar la localidad'),    
+    codpostal:Yup.string().max(10,'El código postal debe tener como máximo 10 caracteres'),            
+    domicilio2:Yup.string().max(50,'El domicilio 2 debe tener como máximo 50 caracteres').nullable(),
+    email:Yup.string().email('El email no es válido').max(200,'El email debe tener como máximo 200 caracteres')
+        .required('Falta completar el e-mail'),            
+    email_secundario:Yup.string().email('El email no es válido').max(200,'El email 2 debe tener como máximo 200 caracteres'),
+    telefono:Yup.string().max(100,'El teléfono debe tener como máximo 100 caracteres')
+    .test('celular','Debe completar un teléfono o celular.',function(val){
+        const {celular} = this.parent;
+    
+        if (!celular && !val){
+            return false
+        } else{
+            return true
+        }
+    }),
+    celular:Yup.string().max(100,'El celular debe tener como máximo 100 caracteres')
+    .test('celular','Debe completar un teléfono o celular.',function(val){
+        const {telefono} = this.parent;
+        if (!telefono && !val){
+            return false
+        }  else{
+            return true
+        }
+    }),
+    telef_alternativo:Yup.string().max(100,'El teléfono alt. debe tener como máximo 100 caracteres'),
+    telef_laboral:Yup.string().max(100,'El teléfono lab. debe tener como máximo 100 caracteres'),
+    obs_finanzas:Yup.string().max(1000,'Las observaciones deben tener como máximo 1000 caracteres')
+    })                 
+
+    const onsubmitAlumno = values =>{
+        console.log(values)
+        iniciarGrabarAlumno(values)
+    }
 
     if (huboError){
         return <Main center><span>Se produjo un error al cargar los datos para esta vista</span></Main>
@@ -1156,7 +1195,7 @@ const onsubmitAlumno = values =>{
                 <Formik validateOnMount 
                 enableReinitialize initialValues={objetoInicializacion}
     validationSchema={validationSchemaAlumno} onSubmit={onsubmitAlumno}>
-{ ({ values, errors, touched, handleChange,setFieldValue, resetForm, initialValues,dirty }) =>{ 
+{ ({ values, handleChange, setFieldValue, resetForm, initialValues, dirty }) =>{ 
     return (
     <Form id="ref-ficha">
     <div className="AnaliticoContainer relative">
@@ -1238,6 +1277,8 @@ const onsubmitAlumno = values =>{
                     <select onChange={handleChange} value={values.sexo} name="sexo" className="w-selabm" id="abm-alumno-sexo">
                             <option  value="M">Hombre</option>
                             <option  value="F">Mujer</option>
+                            <option  value="X">No binario</option>
+                            <option  value="N">Prefiero NO responder</option>
                     </select>
                 </div>  
                 <div className="error_formulario"><ErrorMessage name="sexo"/></div>                                     
@@ -1282,7 +1323,7 @@ const onsubmitAlumno = values =>{
                         <div className="error_formulario"><ErrorMessage name="dia"/></div> 
                         <div className="error_formulario"><ErrorMessage name="mes"/></div> 
                         <div className="error_formulario"><ErrorMessage name="anio"/></div>  
-                </div>            
+            </div>            
 
             <div className="flex f-row mt-2 mb-2">
                 <label className="Form__labels__abmcursos_corto">Edad</label>
@@ -1472,7 +1513,7 @@ const onsubmitAlumno = values =>{
                             value={values.provincia} 
                             name="provincia"
                             title={values.pais==-2 ? 'No se encontraron provincias para el país seleccionado':''} 
-                            disabled = {values.pais===-1}
+                            disabled = {values.pais==-1}
                             className="w-selabm" id="abm-curso-provincia">
                           
                             {
@@ -1503,8 +1544,8 @@ const onsubmitAlumno = values =>{
     </div>    
     </Form>) } }
 
-    </Formik>
-        </div>
+                </Formik>
+            </div>
     </div>
 
     <div className={grabarSoloDatos ? "flex f-col hidden" : "flex f-col"}>
@@ -2133,7 +2174,7 @@ function Carreras({carreras,carrerasAlumno,handleChangeCarreras,usuario}){
     return <div className="flex items-center border-bottom-solid-light cabecera ">
         <span title={JSON.stringify(carrerasAlumno)}>Carreras:</span>
         {carreras.map(item=>{
-            return <div className="flex justify-center">
+            return <div key={item.id_carrera} className="flex justify-center">
                     <label className="text-small color-gray ml-4 mr-2" htmlFor="abm-activo">{item.descripcion}</label>
                     <input disabled={usuario.id_permiso!=3} type="checkbox" value={item.id_carrera} checked={carrerasAlumno.some(carrera=>carrera.id_carrera==item.id_carrera)} onClick={handleChangeCarreras}/>
             </div>

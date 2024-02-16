@@ -3,22 +3,19 @@ import Axios from 'axios';
 import Main from '../componentes/Main';
 import Modal from '../componentes/Modal';
 import useModal from '../hooks/useModal';
-import { Link } from 'react-router-dom';
 import Loading from '../componentes/Loading';
 import {useAlumno} from '../Context/alumnoContext';
-import AbmCurso from '../abms/abm-curso';
 import AbmAlumno from '../abms/abm-alumno';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faStar, faCheckCircle, faWindowClose, faEnvelopeOpen, faPlusSquare,faCircle, faHandPeace, faWindowRestore } from '@fortawesome/free-regular-svg-icons';
-import { faGraduationCap,faKey, faTrash, faAngleRight,faAngleLeft, faSpellCheck ,faInfoCircle, faUndo, faSearch, faSync, faAt, faEquals, faHashtag, faGreaterThanEqual,faMailBulk,faUserCheck, faUsers, faListOl, faEnvelopeSquare, faUserSlash } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faStar, faCheckCircle, faWindowClose, faEnvelopeOpen, faPlusSquare,faCircle } from '@fortawesome/free-regular-svg-icons';
+import { faGraduationCap,faKey, faTrash, faAngleRight,faAngleLeft, faSpellCheck ,faInfoCircle, faUndo, faSearch, faSync, faAt, faEquals, faGreaterThanEqual, faUserCheck, faUsers } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
-import Busqueda from '../componentes/Busqueda';
 import BusquedaEgresados from '../componentes/BusquedaEgresados';
 import BajaAlumnos from '../componentes/BajaAlumnos';
 import CandidatosEgresados from '../componentes/CandidatosEgresados';
 import AbmPassword from '../abms/Abm-password';
 import ValidarEmails from '../componentes/ValidarEmails';
-import {scrollTop, hacerScroll,hacerfocoEnPrimerInput,seleccionarTextoInput} from '../Helpers/utilidades-globales';
+import { hacerfocoEnPrimerInput, seleccionarTextoInput } from '../Helpers/utilidades-globales';
 import SeleccionadorX from '../componentes/SeleccionadorX';
 
 const regex_solo_numeros = /^[0-9\b]+$/;
@@ -1478,7 +1475,7 @@ return(
                         </a> 
                     </th>                    
                     <th scope="col" className={orden=='id_alumno' ? 'orden-activo' : 'cursor-pointer'} onClick={()=>funcionOrden('id_alumno')}>#ID</th>
-                    <th className="mw-120x" className={orden=='alumno' ? 'orden-activo' : 'mw-120x cursor-pointer'} onClick={()=>funcionOrden('alumno')} scope="col">Nombre</th>
+                    <th className={orden=='alumno' ? 'orden-activo' : 'mw-120x cursor-pointer'} onClick={()=>funcionOrden('alumno')} scope="col">Nombre</th>
                     <th className={orden=='Egresado' ? 'orden-activo' : 'mw-120x cursor-pointer'} onClick={()=>funcionOrden('Egresado')} title="Egresado o Regular" scope="col">E/R</th>
                     <th className={orden=='instrumentos' ? 'orden-activo' : 'mw-120x cursor-pointer'} onClick={()=>funcionOrden('instrumentos')} scope="col">Instrumento</th>
                     <th className={orden=='carreras' ? 'orden-activo' : 'mw-120x cursor-pointer'} onClick={()=>funcionOrden('carreras')} scope="col">Carreras</th>

@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, withRouter,NavLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link,  NavLink } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faBalanceScale, faChartLine,faPowerOff, faBars, faCalendarAlt as calendar2, faClone,faUsers, faSync, faChalkboardTeacher } from '@fortawesome/free-solid-svg-icons';
-import {faCompass, faUserCircle, faCaretSquareUp, faCaretSquareDown, faCalendarAlt,faWindowClose,faPlusSquare } from '@fortawesome/free-regular-svg-icons';
+import { faPowerOff, faBars, faCalendarAlt as calendar2, faClone,faUsers, faSync, faChalkboardTeacher } from '@fortawesome/free-solid-svg-icons';
+import { faUserCircle, faCalendarAlt } from '@fortawesome/free-regular-svg-icons';
 import {useAlumno} from '../Context/alumnoContext';
 import useModal from '../hooks/useModal';
 import Modal from './Modal';
-import Busqueda from './Busqueda'
 import Aulas from './Aulas'
 import Instrumentos from './Instrumentos'
 import Materias from './Materias'
@@ -17,7 +16,7 @@ import Logs from './Logs';
 //import {Finanzas} from './Finanzas';
 import {NuevosAlumnos} from './NuevosAlumnos';
 
-import imagen from '../logoemc.PNG';
+import { ComprobantesDePago } from './ComprobantesDePago';
 
 export default function Nav({ usuario, logout, cuatrimestreActivo }) {
 
@@ -414,6 +413,10 @@ return(
                           setTitulo('Nuevos alumnos')
                           toggle();toggleMenuVertical()}}>Nuevos alumnos
           </li>
+          <li title="Comprobantes de pago" className="listado-al  p-2" onClick={()=>{setComponenteModal('comprobante-pago')
+                          setTitulo('Comprobantes de pago')
+                          toggle();toggleMenuVertical()}}>Comprobantes de pago
+          </li>
           <li title="Actualizar tablas secundarias" className="listado-al mt-4 mb-6 p-2" onClick={()=>{setComponenteModal('refrescar')
                           setTitulo('Actualizar tablas secundarias')
                           toggle();toggleMenuVertical()}}><FontAwesomeIcon icon={faSync} /> Refrescar tablas
@@ -505,6 +508,7 @@ function SeleccionarComponenteModal({componente}){
     case 'logs' : return <Logs/>
     //case 'finanzas' : return <Finanzas/>
     case 'nuevos-alumnos' : return <NuevosAlumnos/>
+    case 'comprobante-pago' : return <ComprobantesDePago/>
     default: return null
   }
 }

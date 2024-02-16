@@ -567,7 +567,7 @@ table tr{
 .flex-wrap{flex-wrap: wrap;
 }
 
-.info-gr: {
+.info-gr {
   color: #fff;
   background: #222
 }
@@ -1917,6 +1917,7 @@ button {
 [type='reset'],
 [type='submit'],
 button {
+  appearance: button;
   -webkit-appearance: button;
 }
 [type='button']::-moz-focus-inner,
@@ -1954,6 +1955,7 @@ textarea {
 }
 [type='search'] {
   -webkit-appearance: textfield;
+  appearance: texfield;
   outline-offset: -2px;
 }
 [type='search']::-webkit-search-decoration {
@@ -3463,8 +3465,10 @@ select {
 
 table#nuevos-alumnos tbody tr td{
   border-bottom: solid 1px gray;
+  border-top: none;
   padding:5px;
-  cursor:pointer
+  cursor:pointer;
+  border-right: none;
 }
 
 table#nuevos-alumnos thead tr th{
@@ -3472,6 +3476,9 @@ table#nuevos-alumnos thead tr th{
 }
 
 table#nuevos-alumnos tbody tr {
+  background:#ffffff;
+}
 
-  background:#9F9F9F;
+.button_modal {
+  border: 1px solid #000000
 }
